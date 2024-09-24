@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phone Numbers CSV Viewer</title>
+<!-- Include Bootstrap CSS via CDN -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<!-- Include DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css">
+
+<!-- Custom CSS -->
+<style>
+body {
+    padding: 20px;
+    background-color: #FFECEC; /* Very light shade of IndianRed */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+h1 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #CD5C5C; /* IndianRed */
+}
+#phoneTable {
+    margin-top: 20px;
+}
+.table thead th {
+    background-color: #CD5C5C; /* IndianRed */
+    color: #fff;
+}
+.table-striped tbody tr:nth-of-type(odd) {
+    background-color: #FFDADA; /* Lighter shade of IndianRed */
+}
+.table-striped tbody tr:nth-of-type(even) {
+    background-color: #FFFFFF; /* White */
+}
+.form-control-file {
+    margin-bottom: 20px;
+}
+.input-comment {
+    width: 100%;
+    box-sizing: border-box;
+}
+/* Add cursor pointer to phone number cells */
+.phone-number-cell {
+    cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Phone Numbers CSV Viewer</h1>
+    <div class="form-group">
+        <input type="file" class="form-control-file" id="csvFileInput" accept=".csv">
+    </div>
+    <table class="table table-striped" id="phoneTable">
+        <thead>
+            <tr>
+                <th>S.No.</th>
+                <th>Phone Number</th>
+                <th>Comment</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Rows will be added here dynamically -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Include jQuery and Bootstrap JS via CDN -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<!-- Include DataTables JS -->
+<script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
+<!-- Include Bootstrap JS -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<!-- Custom JS -->
+<script>
+document.getElementById('csvFileInput').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (file) {
+        // Read the file
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var contents = e.target.result;
+            processCSV(contents);
+        };
+        reader.readAsText(file);
+    }
+});
+
+function processCSV(csvText) {
+    var lines = csvText.split(/\r\n|\n/);
+    var phoneNumbers = [];
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (line) {
+            phoneNumbers.push(line);
+        }
+    }
+    displayPhoneNumbers(phoneNumbers);
+}
+
+function processPhoneNumber(number) {
+    number = number.trim();
+    if (number.startsWith('971')) {
+        number = number.substring(3);
+        number = '0' + number;
+    }
+    return number;
+}
+
+function displayPhoneNumbers(phoneNumbers) {
+    var tbody = document.querySelector('#phoneTable tbody');
+    tbody.innerHTML = '';
+    for (var i = 0; i < phoneNumbers.length; i++) {
+        var originalNumber = phoneNumbers[i];
+        var processedNumber = processPhoneNumber(originalNumber);
+
+        // Get any existing comment from localStorage
+        var comment = localStorage.getItem('comment_' + processedNumber) || '';
+
+        // Create table row
+        var tr = document.createElement('tr');
+
+        // Serial Number cell
+        var tdSerial = document.createElement('td');
+        tdSerial.textContent = i + 1;
+        tr.appendChild(tdSerial);
+
+        // Phone Number cell
+        var tdNumber = document.createElement('td');
+        tdNumber.textContent = processedNumber;
+        tdNumber.classList.add('phone-number-cell');
+
+        // Add event listener to copy number to clipboard on click
+        tdNumber.addEventListener('click', function() {
+            var numberToCopy = this.textContent;
+            copyToClipboard(numberToCopy);
+
+            // Provide visual feedback
+            this.style.backgroundColor = '#FFC0CB'; // Light pink background
+            var cell = this;
+            setTimeout(function() {
+                cell.style.backgroundColor = '';
+            }, 200);
+        });
+
+        tr.appendChild(tdNumber);
+
+        // Comment cell
+        var tdComment = document.createElement('td');
+        var inputComment = document.createElement('input');
+        inputComment.type = 'text';
+        inputComment.value = comment;
+        inputComment.className = 'form-control input-comment';
+        inputComment.dataset.number = processedNumber;
+
+        // Add event listener to save comment on change
+        inputComment.addEventListener('change', function() {
+            var number = this.dataset.number;
+            var comment = this.value;
+            localStorage.setItem('comment_' + number, comment);
+        });
+
+        tdComment.appendChild(inputComment);
+        tr.appendChild(tdComment);
+
+        tbody.appendChild(tr);
+    }
+
+    // Initialize DataTable with ordering disabled
+    if ($.fn.dataTable.isDataTable('#phoneTable')) {
+        $('#phoneTable').DataTable().destroy();
+    }
+    $('#phoneTable').DataTable({
+        paging: true,
+        searching: true,
+        info: false,
+        autoWidth: false,
+        ordering: false, // Disable ordering to keep the original order
+        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
+        pageLength: 10
+    });
+}
+
+// Function to copy text to clipboard
+function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        // Navigator clipboard api method'
+        navigator.clipboard.writeText(text).then(function() {
+            console.log('Async: Copying to clipboard was successful!');
+        }, function(err) {
+            console.error('Async: Could not copy text: ', err);
+        });
+    } else {
+        // Create a text area
+        let textArea = document.createElement("textarea");
+        textArea.value = text;
+
+        // Make the textarea out of viewport
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            document.execCommand('copy');
+            console.log('Copying text command was successful');
+        } catch (err) {
+            console.error('Unable to copy', err);
+        }
+
+        document.body.removeChild(textArea);
+    }
+}
+</script>
+
+</body>
+</html>
