@@ -45,6 +45,9 @@ h1 {
 .phone-number-cell {
     cursor: pointer;
 }
+.clicked-number {
+    background-color: #FFC0CB !important; /* Light pink background */
+}
 </style>
 </head>
 <body>
@@ -120,6 +123,7 @@ function displayPhoneNumbers(phoneNumbers) {
 
         // Get any existing comment from localStorage
         var comment = localStorage.getItem('comment_' + processedNumber) || '';
+        var isClicked = localStorage.getItem('clicked_' + processedNumber) === 'true';
 
         // Create table row
         var tr = document.createElement('tr');
@@ -133,18 +137,18 @@ function displayPhoneNumbers(phoneNumbers) {
         var tdNumber = document.createElement('td');
         tdNumber.textContent = processedNumber;
         tdNumber.classList.add('phone-number-cell');
+        if (isClicked) {
+            tdNumber.classList.add('clicked-number');
+        }
 
         // Add event listener to copy number to clipboard on click
         tdNumber.addEventListener('click', function() {
             var numberToCopy = this.textContent;
             copyToClipboard(numberToCopy);
 
-            // Provide visual feedback
-            this.style.backgroundColor = '#FFC0CB'; // Light pink background
-            var cell = this;
-            setTimeout(function() {
-                cell.style.backgroundColor = '';
-            }, 200);
+            // Provide visual feedback and save state
+            this.classList.add('clicked-number');
+            localStorage.setItem('clicked_' + numberToCopy, 'true');
         });
 
         tr.appendChild(tdNumber);
